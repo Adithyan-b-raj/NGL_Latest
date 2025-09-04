@@ -74,12 +74,22 @@ app.engine('hbs', engine({
 }));
 
 app.set('view engine', 'hbs');
-app.set('views', './views');
+// Set views path based on environment
+if (process.env.NODE_ENV === 'production') {
+  app.set('views', './dist/views');
+} else {
+  app.set('views', './views');
+}
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(express.static('dist/public'));
+// Serve static files based on environment
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static('dist/public'));
+} else {
+  app.use(express.static('client'));
+}
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
