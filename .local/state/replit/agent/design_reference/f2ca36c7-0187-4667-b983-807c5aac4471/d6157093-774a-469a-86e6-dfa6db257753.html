@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymous Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                },
+                fontFamily: {
+                    sans: ["var(--font-sans)"],
+                }
+            },
+        }
+    };
+    </script>
+    <style>
+        :root {
+            --background: hsl(0 0% 100%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(222.2 47.4% 11.2%);
+            --primary-foreground: hsl(210 40% 98%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(222.2 84% 4.9%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(210 40% 96%);
+            --accent-foreground: hsl(222.2 84% 4.9%);
+            --destructive: hsl(0 84.2% 60.2%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(222.2 84% 4.9%);
+            --radius: 0.5rem;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+        }
+
+        .chat-container {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .messages-area {
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: hsl(214.3 31.8% 91.4%) transparent;
+        }
+
+        .messages-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-area::-webkit-scrollbar-thumb {
+            background-color: hsl(214.3 31.8% 91.4%);
+            border-radius: 3px;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .message-input {
+            resize: none;
+            min-height: 20px;
+            max-height: 100px;
+        }
+
+        .online-indicator {
+            width: 8px;
+            height: 8px;
+            background-color: hsl(142 71% 45%);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 hsla(142, 71%, 45%, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 4px hsla(142, 71%, 45%, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 hsla(142, 71%, 45%, 0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground">
+    <!-- @COMPONENT: ChatContainer [main chat interface] -->
+    <div class="chat-container flex flex-col bg-background">
+        <!-- @COMPONENT: ChatHeader [header with title and status] -->
+        <div class="border-b border-border px-6 py-4 flex items-center justify-between bg-card">
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <div>
+                        <h1 class="text-lg font-semibold text-foreground">Anonymous Chat</h1>
+                        <p class="text-sm text-muted-foreground">Send messages anonymously</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="online-indicator"></div>
+                <span class="text-sm text-muted-foreground">Online</span>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: ChatHeader -->
+
+        <!-- @COMPONENT: MessagesArea [scrollable message container] -->
+        <div class="messages-area flex-1 px-6 py-4 bg-background">
+            <!-- @STATE: messages:array = [] -->
+            <div id="messagesContainer" class="space-y-3">
+                <!-- @MAP: messages.map(message => ( -->
+                <!-- Example messages - these would be dynamically rendered -->
+                <div class="flex justify-end" data-mock="true">
+                    <div class="message-bubble bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-sm">
+                        <p class="text-sm" data-bind="message.text">Hello, I need some advice</p>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <span class="text-xs text-muted-foreground mt-1" data-bind="formatDate(message.created_at)">10:42 pm</span>
+                </div>
+
+                <div class="flex justify-start" data-mock="true">
+                    <div class="message-bubble bg-muted text-muted-foreground px-4 py-2 rounded-lg shadow-sm">
+                        <p class="text-sm" data-bind="message.text">I'm here to help! What's on your mind?</p>
+                    </div>
+                </div>
+                <div class="flex justify-start">
+                    <span class="text-xs text-muted-foreground mt-1" data-bind="formatDate(message.created_at)">10:42 pm</span>
+                </div>
+
+                <div class="flex justify-end" data-mock="true">
+                    <div class="message-bubble bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-sm">
+                        <p class="text-sm" data-bind="message.text">ho</p>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <span class="text-xs text-muted-foreground mt-1" data-bind="formatDate(message.created_at)">10:43 pm</span>
+                </div>
+                <!-- @END_MAP )) -->
+
+                <!-- Empty state when no messages -->
+                <div id="emptyState" class="hidden flex flex-col items-center justify-center h-64 text-center">
+                    <div class="text-4xl mb-4">👋</div>
+                    <p class="text-muted-foreground text-sm">Start the conversation by sending your first anonymous message!</p>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: MessagesArea -->
+
+        <!-- @COMPONENT: MessageInput [message composition area] -->
+        <div class="border-t border-border px-6 py-4 bg-card">
+            <form id="messageForm" class="flex items-end space-x-3" data-event="submit:handleSendMessage">
+                <!-- @STATE: messageText:string = '' -->
+                <div class="flex-1">
+                    <textarea 
+                        id="messageInput"
+                        name="message"
+                        class="message-input w-full px-4 py-3 border border-input rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground"
+                        placeholder="Type your anonymous message..."
+                        rows="1"
+                        data-bind="messageText"
+                        data-implementation="Auto-resize based on content, max 4 rows"
+                        required></textarea>
+                </div>
+                <button 
+                    type="submit" 
+                    id="sendButton"
+                    class="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-event="click:sendMessage"
+                    data-implementation="Should validate message before sending">
+                    <svg id="sendIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    <!-- Loading state icon -->
+                    <svg id="loadingIcon" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </form>
+            
+            <!-- Success/Error Messages -->
+            <div id="alertContainer" class="mt-2 hidden">
+                <div id="successAlert" class="hidden p-2 bg-green-50 border border-green-200 text-green-700 rounded text-sm">
+                    Message sent successfully!
+                </div>
+                <div id="errorAlert" class="hidden p-2 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+                    Failed to send message. Please try again.
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: MessageInput -->
+    </div>
+    <!-- @END_COMPONENT: ChatContainer -->
+
+    <script>
+        (function() {
+            // DOM elements
+            const messageForm = document.getElementById('messageForm');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const sendIcon = document.getElementById('sendIcon');
+            const loadingIcon = document.getElementById('loadingIcon');
+            const messagesContainer = document.getElementById('messagesContainer');
+            const emptyState = document.getElementById('emptyState');
+            const successAlert = document.getElementById('successAlert');
+            const errorAlert = document.getElementById('errorAlert');
+            const alertContainer = document.getElementById('alertContainer');
+
+            // @FUNCTIONALITY: Auto-resize textarea based on content
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+            });
+
+            // @FUNCTIONALITY: Handle form submission
+            messageForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = messageInput.value.trim();
+                
+                if (!message) return;
+
+                // Show loading state
+                sendButton.disabled = true;
+                sendIcon.classList.add('hidden');
+                loadingIcon.classList.remove('hidden');
+                
+                // Hide previous alerts
+                hideAlerts();
+
+                // TODO: Implement actual API call to /send-message
+                // Simulating API call for mockup
+                setTimeout(() => {
+                    try {
+                        // Add message to UI immediately
+                        addMessageToChat(message, false, new Date());
+                        
+                        // Clear input
+                        messageInput.value = '';
+                        messageInput.style.height = 'auto';
+                        
+                        // Show success
+                        showAlert('success', 'Message sent successfully!');
+                        
+                        // Reset button state
+                        resetSendButton();
+                        
+                        // TODO: In real implementation, this would be a fetch call:
+                        /*
+                        fetch('/send-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: 'message=' + encodeURIComponent(message)
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                addMessageToChat(message, false, new Date());
+                                messageInput.value = '';
+                                messageInput.style.height = 'auto';
+                                showAlert('success', 'Message sent successfully!');
+                            } else {
+                                throw new Error('Failed to send');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            showAlert('error', 'Failed to send message. Please try again.');
+                        })
+                        .finally(() => {
+                            resetSendButton();
+                        });
+                        */
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showAlert('error', 'Failed to send message. Please try again.');
+                        resetSendButton();
+                    }
+                }, 1000); // Simulated network delay
+            });
+
+            function resetSendButton() {
+                sendButton.disabled = false;
+                sendIcon.classList.remove('hidden');
+                loadingIcon.classList.add('hidden');
+            }
+
+            function showAlert(type, message) {
+                alertContainer.classList.remove('hidden');
+                if (type === 'success') {
+                    successAlert.classList.remove('hidden');
+                    successAlert.textContent = message;
+                    setTimeout(() => hideAlerts(), 3000);
+                } else if (type === 'error') {
+                    errorAlert.classList.remove('hidden');
+                    errorAlert.textContent = message;
+                }
+            }
+
+            function hideAlerts() {
+                alertContainer.classList.add('hidden');
+                successAlert.classList.add('hidden');
+                errorAlert.classList.add('hidden');
+            }
+
+            // @FUNCTIONALITY: Add message to chat UI
+            function addMessageToChat(message, isAdmin, timestamp) {
+                // Hide empty state if visible
+                emptyState.classList.add('hidden');
+                
+                // Create message bubble
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex ${isAdmin ? 'justify-start' : 'justify-end'} mb-1`;
+                
+                const bubble = document.createElement('div');
+                bubble.className = `message-bubble px-4 py-2 rounded-lg shadow-sm ${
+                    isAdmin 
+                        ? 'bg-muted text-muted-foreground' 
+                        : 'bg-primary text-primary-foreground'
+                }`;
+                
+                const messageText = document.createElement('p');
+                messageText.className = 'text-sm';
+                messageText.textContent = message;
+                
+                bubble.appendChild(messageText);
+                messageDiv.appendChild(bubble);
+                
+                // Create timestamp
+                const timestampDiv = document.createElement('div');
+                timestampDiv.className = `flex ${isAdmin ? 'justify-start' : 'justify-end'} mb-3`;
+                
+                const timestampSpan = document.createElement('span');
+                timestampSpan.className = 'text-xs text-muted-foreground';
+                timestampSpan.textContent = formatTimestamp(timestamp);
+                
+                timestampDiv.appendChild(timestampSpan);
+                
+                // Add to container
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.appendChild(timestampDiv);
+                
+                // Scroll to bottom
+                scrollToBottom();
+            }
+
+            function formatTimestamp(date) {
+                return new Date(date).toLocaleString('en-IN', {
+                    timeZone: 'Asia/Kolkata',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+
+            function scrollToBottom() {
+                const messagesArea = document.querySelector('.messages-area');
+                if (messagesArea) {
+                    messagesArea.scrollTop = messagesArea.scrollHeight;
+                }
+            }
+
+            // @FUNCTIONALITY: Auto-refresh for new messages (polling)
+            // TODO: Replace with WebSocket or Server-Sent Events for real-time updates
+            function pollForNewMessages() {
+                // In real implementation, this would check for new messages
+                // setInterval(() => {
+                //     fetch('/api/messages/latest')
+                //         .then(response => response.json())
+                //         .then(data => {
+                //             if (data.newMessages) {
+                //                 data.newMessages.forEach(msg => {
+                //                     addMessageToChat(msg.text, msg.isAdmin, msg.timestamp);
+                //                 });
+                //             }
+                //         });
+                // }, 3000);
+            }
+
+            // Initialize
+            function init() {
+                // Check if we have messages
+                const existingMessages = messagesContainer.children.length;
+                if (existingMessages === 1 && messagesContainer.children[0].id === 'emptyState') {
+                    emptyState.classList.remove('hidden');
+                }
+                
+                // Auto-scroll to bottom on load
+                scrollToBottom();
+                
+                // Focus input
+                messageInput.focus();
+                
+                // Start polling (commented out for mockup)
+                // pollForNewMessages();
+            }
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+            // @FUNCTIONALITY: Handle keyboard shortcuts
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    messageForm.dispatchEvent(new Event('submit'));
+                }
+            });
+
+            // Simulate receiving an admin reply after 5 seconds (for demo purposes)
+            setTimeout(() => {
+                // addMessageToChat("Thanks for your message! How can I help you today?", true, new Date());
+            }, 5000);
+        })();
+    </script>
+</body>
+</html>

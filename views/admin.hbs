@@ -1,0 +1,122 @@
+<div class="admin-theme">
+  <div class="container">
+    <div class="header" style="justify-content: space-between;">
+      <h1>Admin Dashboard</h1>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="7" r="4"></circle>
+            <path d="m12 2 0 2"></path>
+            <path d="m12 20 0 2"></path>
+            <path d="m4.93 4.93 1.41 1.41"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12l2 0"></path>
+            <path d="M20 12l2 0"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path>
+            <path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+          <svg class="moon-icon" style="display: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+        <form method="POST" action="/admin/logout" style="margin: 0;">
+          <button type="submit" class="logout-btn">Logout</button>
+        </form>
+      </div>
+    </div>
+
+    <div style="padding: 24px;">
+      <h2 style="color: var(--text-primary); margin-bottom: 24px; font-family: inherit; font-size: 1.25rem; font-weight: 600;">Active Conversations</h2>
+      
+      {{#if conversations}}
+      <div style="display: grid; gap: 16px;">
+        {{#each conversations}}
+        <div style="background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px var(--shadow-primary); transition: all 0.2s ease;"
+             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 6px var(--shadow-secondary)'"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px var(--shadow-primary)'">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+            <div>
+              <h3 style="color: var(--text-primary); margin: 0 0 6px 0; font-size: 16px; font-family: inherit; font-weight: 600;">
+                Anonymous User
+              </h3>
+              <p style="color: var(--text-secondary); margin: 0; font-size: 13px; font-family: inherit; font-weight: 400;">
+                Session: {{session_id}}
+              </p>
+            </div>
+            <span style="background: var(--bg-tertiary); color: var(--text-primary); padding: 6px 12px; border-radius: 16px; font-size: 12px; font-family: inherit; font-weight: 500; border: 1px solid var(--border-primary);">
+              {{message_count}} messages
+            </span>
+          </div>
+          
+          <div style="margin-bottom: 16px; background: var(--bg-secondary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-primary);">
+            <p style="color: var(--text-secondary); font-size: 13px; margin: 0 0 4px 0; font-family: inherit;">
+              Created: {{formatDate created_at}}
+            </p>
+            <p style="color: var(--text-secondary); font-size: 13px; margin: 0; font-family: inherit;">
+              Last activity: {{formatDate last_activity}}
+            </p>
+          </div>
+          
+          <a href="/admin/conversation/{{id}}" 
+             style="display: inline-block; background: var(--accent-primary); color: var(--bg-primary); padding: 10px 16px; text-decoration: none; border-radius: 8px; font-size: 14px; font-family: inherit; font-weight: 500; box-shadow: 0 1px 2px var(--shadow-secondary); transition: all 0.2s ease;"
+             onmouseover="this.style.background='var(--accent-secondary)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 4px var(--shadow-secondary)'"
+             onmouseout="this.style.background='var(--accent-primary)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 2px var(--shadow-secondary)'">
+            View Conversation
+          </a>
+        </div>
+        {{/each}}
+      </div>
+      {{else}}
+      <div class="empty-state">
+        <p>No conversations yet. Anonymous conversations will appear here when users start chatting.</p>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+</div>
+
+<script>
+// Dark mode toggle functionality
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  
+  document.documentElement.classList.add('theme-transition');
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  
+  // Update toggle button icons
+  const sunIcon = document.querySelector('.sun-icon');
+  const moonIcon = document.querySelector('.moon-icon');
+  
+  if (newTheme === 'dark') {
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+  } else {
+    sunIcon.style.display = 'block';
+    moonIcon.style.display = 'none';
+  }
+  
+  // Remove transition class after animation
+  setTimeout(() => {
+    document.documentElement.classList.remove('theme-transition');
+  }, 300);
+}
+
+// Initialize theme on page load
+(function() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  
+  const sunIcon = document.querySelector('.sun-icon');
+  const moonIcon = document.querySelector('.moon-icon');
+  
+  if (savedTheme === 'dark') {
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+  } else {
+    sunIcon.style.display = 'block';
+    moonIcon.style.display = 'none';
+  }
+})();
+</script>

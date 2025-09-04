@@ -1,0 +1,271 @@
+<div class="admin-theme">
+  <div class="container">
+    <div class="header" style="justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <a href="/admin" style="color: var(--text-secondary); text-decoration: none; font-size: 14px; font-family: inherit; font-weight: 500; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-primary); transition: all 0.2s ease;"
+           onmouseover="this.style.background='var(--bg-tertiary)'; this.style.color='var(--text-primary)'"
+           onmouseout="this.style.background='var(--bg-secondary)'; this.style.color='var(--text-secondary)'">
+          ← Back to Dashboard
+        </a>
+        <h1>Anonymous User</h1>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="7" r="4"></circle>
+            <path d="m12 2 0 2"></path>
+            <path d="m12 20 0 2"></path>
+            <path d="m4.93 4.93 1.41 1.41"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12l2 0"></path>
+            <path d="M20 12l2 0"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path>
+            <path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+          <svg class="moon-icon" style="display: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+        <form method="POST" action="/admin/logout" style="margin: 0;">
+          <button type="submit" class="logout-btn">Logout</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="conversation-info">
+      <p><strong>Session ID:</strong> {{conversation.session_id}}</p>
+      <p><strong>Created:</strong> {{formatDate conversation.created_at}}</p>
+      <p><strong>Last Activity:</strong> {{formatDate conversation.last_activity}}</p>
+      <p><strong>Total Messages:</strong> {{messages.length}}</p>
+    </div>
+
+    <div class="content">
+      {{#if (lookup (query) 'success')}}
+      <div class="alert alert-success">
+        Reply sent successfully!
+      </div>
+      {{/if}}
+
+      {{#if (lookup (query) 'error')}}
+      <div class="alert alert-error">
+        {{#if (eq (lookup (query) 'error') 'empty')}}
+        Please enter a reply message
+        {{else}}
+        Failed to send reply
+        {{/if}}
+      </div>
+      {{/if}}
+
+      {{#if messages}}
+      <div class="messages">
+        {{#each messages}}
+        <div class="message {{#if is_admin_reply}}admin{{else}}user{{/if}}">
+          <p class="message-content">
+            {{#if is_admin_reply}}<strong>You (Admin):</strong> {{/if}}
+            {{message}}
+          </p>
+        </div>
+        <div class="message-time">{{formatDate created_at}}</div>
+        {{/each}}
+      </div>
+      {{else}}
+      <div class="empty-state">
+        <p>No messages in this conversation yet.</p>
+      </div>
+      {{/if}}
+
+      <div class="message-form">
+        <form id="replyForm">
+          <div class="form-group">
+            <label for="reply">Your Reply:</label>
+            <div class="message-input-container">
+              <textarea name="reply" id="reply" placeholder="Type your reply..." required rows="1"></textarea>
+              <button type="submit" class="btn" id="sendReplyBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-resize textarea
+const textarea = document.getElementById('reply');
+textarea.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+
+// Auto-scroll to bottom
+const messages = document.querySelector('.messages');
+if (messages) {
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// Handle reply form submission without page reload
+const replyForm = document.getElementById('replyForm');
+const sendReplyBtn = document.getElementById('sendReplyBtn');
+
+replyForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const reply = textarea.value.trim();
+  
+  if (!reply) return;
+
+  // Disable button and show sending state
+  sendReplyBtn.disabled = true;
+  sendReplyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><circle cx="12" cy="12" r="3"></circle><path d="m12 1 0 6"></path><path d="m12 17 0 6"></path><path d="m3.5 3.5 4.2 4.2"></path><path d="m16.3 16.3 4.2 4.2"></path><path d="M1 12l6 0"></path><path d="M17 12l6 0"></path><path d="m3.5 20.5 4.2-4.2"></path><path d="m16.3 7.7 4.2-4.2"></path></svg>';
+
+  // Send reply via fetch
+  fetch(`/admin/reply/{{conversation.id}}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'reply=' + encodeURIComponent(reply)
+  })
+  .then(response => {
+    if (response.ok) {
+      // Clear the input
+      textarea.value = '';
+      textarea.style.height = 'auto';
+      
+      // Add message to chat immediately
+      addReplyToChat(reply);
+      
+      // Re-enable button
+      sendReplyBtn.disabled = false;
+      sendReplyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22,2 15,22 11,13 2,9 22,2"></polygon></svg>';
+    } else {
+      throw new Error('Failed to send');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    sendReplyBtn.disabled = false;
+    sendReplyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22,2 15,22 11,13 2,9 22,2"></polygon></svg>';
+    alert('Failed to send reply. Please try again.');
+  });
+});
+
+// Function to add reply to chat UI
+function addReplyToChat(reply) {
+  let messagesContainer = document.querySelector('.messages');
+  
+  // If no messages container exists, create one
+  if (!messagesContainer) {
+    const emptyState = document.querySelector('.empty-state');
+    if (emptyState) {
+      emptyState.remove();
+    }
+    
+    messagesContainer = document.createElement('div');
+    messagesContainer.className = 'messages';
+    document.querySelector('.content').insertBefore(messagesContainer, document.querySelector('.message-form'));
+  }
+
+  // Create message element
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message admin';
+  
+  const messageContent = document.createElement('p');
+  messageContent.className = 'message-content';
+  messageContent.innerHTML = '<strong>You (Admin):</strong> ' + reply;
+  
+  const messageTime = document.createElement('div');
+  messageTime.className = 'message-time';
+  messageTime.textContent = new Date().toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  messageDiv.appendChild(messageContent);
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.appendChild(messageTime);
+
+  // Scroll to bottom
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Auto-refresh for new user messages every 3 seconds
+setInterval(function() {
+  // Only refresh if we're not actively typing
+  if (document.activeElement !== textarea) {
+    fetch(window.location.href)
+      .then(response => response.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(html, 'text/html');
+        const newMessages = newDoc.querySelector('.messages');
+        const currentMessages = document.querySelector('.messages');
+        
+        if (newMessages && currentMessages) {
+          // Only update if content changed
+          if (newMessages.innerHTML !== currentMessages.innerHTML) {
+            currentMessages.innerHTML = newMessages.innerHTML;
+            currentMessages.scrollTop = currentMessages.scrollHeight;
+          }
+        } else if (newMessages && !currentMessages) {
+          // First message received, reload page
+          window.location.reload();
+        }
+      })
+      .catch(error => console.log('Auto-refresh error:', error));
+  }
+}, 3000);
+
+// Dark mode toggle functionality
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  
+  document.documentElement.classList.add('theme-transition');
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  
+  // Update toggle button icons
+  const sunIcon = document.querySelector('.sun-icon');
+  const moonIcon = document.querySelector('.moon-icon');
+  
+  if (newTheme === 'dark') {
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+  } else {
+    sunIcon.style.display = 'block';
+    moonIcon.style.display = 'none';
+  }
+  
+  // Remove transition class after animation
+  setTimeout(() => {
+    document.documentElement.classList.remove('theme-transition');
+  }, 300);
+}
+
+// Initialize theme on page load
+(function() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  
+  const sunIcon = document.querySelector('.sun-icon');
+  const moonIcon = document.querySelector('.moon-icon');
+  
+  if (savedTheme === 'dark') {
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+  } else {
+    sunIcon.style.display = 'block';
+    moonIcon.style.display = 'none';
+  }
+})();
+</script>
