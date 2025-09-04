@@ -5,6 +5,7 @@ import bodyParser from 'body-parser';
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import * as dotenv from 'dotenv';
+import connectPgSimple from 'connect-pg-simple';
 
 dotenv.config();
 
@@ -90,11 +91,26 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   app.use(express.static('client'));
 }
+// Configure session store
+const PgSession = connectPgSimple(session);
+const sessionStore = process.env.NODE_ENV === 'production' 
+  ? new PgSession({
+      pool: pool, // Connection pool
+      tableName: 'user_sessions', // Use another table-name than the default "session" one
+      createTableIfMissing: true
+    })
+  : undefined;
+
 app.use(session({
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
-  saveUninitialized: true,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+  saveUninitialized: false,
+  cookie: { 
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true
+  }
 }));
 
 // Authentication middleware
@@ -302,9 +318,40 @@ app.post('/admin/reply/:id', requireAuth, async (req: any, res: any) => {
   }
 });
 
+// Error handling
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  await pool.end();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  await pool.end();
+  process.exit(0);
+});
+
 // Start server
-app.listen(port, '0.0.0.0', async () => {
-  console.log(`Server running on port ${port}`);
+const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+app.listen(port, host, async () => {
+  console.log(`Server running on ${host}:${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  if (process.env.DATABASE_URL) {
+    console.log('Database connected successfully');
+  } else {
+    console.log('Warning: No DATABASE_URL found');
+  }
   await initDatabase();
 });
 
